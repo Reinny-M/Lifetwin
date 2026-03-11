@@ -1,512 +1,751 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 
 const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Outfit:wght@200;300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
   :root {
-    --bg: #080A0F;
-    --bg2: #0D1018;
-    --bg3: #111520;
-    --border: rgba(255,255,255,0.06);
-    --border-bright: rgba(255,255,255,0.12);
-    --gold: #C9A84C;
-    --gold-dim: rgba(201,168,76,0.15);
-    --gold-glow: rgba(201,168,76,0.08);
-    --text: #F0EDE8;
-    --text-dim: rgba(240,237,232,0.45);
-    --text-faint: rgba(240,237,232,0.2);
-    --green: #4ADE80;
-    --red: #F87171;
-    --amber: #FBBF24;
+    --bg-deep:    #04060C;
+    --bg-card:    #080C16;
+    --bg-raised:  #0C1020;
+    --border:     rgba(255,255,255,0.05);
+    --border-md:  rgba(255,255,255,0.09);
+    --border-hi:  rgba(255,255,255,0.14);
+    --gold:       #D4A843;
+    --gold-light: #F0C76A;
+    --gold-dim:   rgba(212,168,67,0.12);
+    --gold-glow:  rgba(212,168,67,0.25);
+    --silver:     rgba(220,225,235,0.9);
+    --text:       #E8EBF2;
+    --text-mid:   rgba(232,235,242,0.55);
+    --text-low:   rgba(232,235,242,0.25);
+    --green:      #34D399;
+    --red:        #FB7185;
+    --amber:      #FCD34D;
+    --blue:       #60A5FA;
+    --radius:     12px;
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .s-root {
+  html { scroll-behavior: smooth; }
+
+  .lt-root {
     min-height: 100vh;
-    background: var(--bg);
-    font-family: 'Syne', sans-serif;
+    background: var(--bg-deep);
+    font-family: 'Outfit', sans-serif;
     color: var(--text);
     overflow-x: hidden;
+    position: relative;
   }
 
-  /* Ambient background glow */
-  .s-root::before {
-    content: '';
+  /* ── BACKGROUND EFFECTS ── */
+  .lt-bg-orb {
     position: fixed;
-    top: -20%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 800px; height: 500px;
-    background: radial-gradient(ellipse, rgba(201,168,76,0.04) 0%, transparent 70%);
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+    animation: orbFloat 8s ease-in-out infinite;
+  }
+  .lt-bg-orb-1 {
+    width: 600px; height: 600px;
+    top: -200px; left: -100px;
+    background: radial-gradient(circle, rgba(212,168,67,0.07) 0%, transparent 70%);
+    animation-delay: 0s;
+  }
+  .lt-bg-orb-2 {
+    width: 500px; height: 500px;
+    top: 300px; right: -150px;
+    background: radial-gradient(circle, rgba(96,165,250,0.05) 0%, transparent 70%);
+    animation-delay: -3s;
+  }
+  .lt-bg-orb-3 {
+    width: 400px; height: 400px;
+    bottom: 0; left: 30%;
+    background: radial-gradient(circle, rgba(212,168,67,0.04) 0%, transparent 70%);
+    animation-delay: -6s;
+  }
+  @keyframes orbFloat {
+    0%, 100% { transform: translateY(0px) scale(1); }
+    50%       { transform: translateY(-30px) scale(1.05); }
+  }
+
+  /* Grid texture */
+  .lt-root::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.013) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.013) 1px, transparent 1px);
+    background-size: 60px 60px;
     pointer-events: none; z-index: 0;
   }
 
-  /* NAV */
-  .s-nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    height: 64px;
-    background: rgba(8,10,15,0.85);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border-bottom: 1px solid var(--border);
+  /* ── NAVBAR ── */
+  .lt-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+    height: 68px;
+    background: rgba(4,6,12,0.7);
+    backdrop-filter: blur(32px) saturate(180%);
+    -webkit-backdrop-filter: blur(32px) saturate(180%);
+    border-bottom: 1px solid var(--border-md);
     display: flex; align-items: center;
     justify-content: space-between;
-    padding: 0 48px;
+    padding: 0 52px;
   }
 
-  .s-logo {
-    display: flex; align-items: center; gap: 12px;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 22px; font-weight: 300;
-    letter-spacing: 2px; color: var(--text);
-    text-transform: uppercase;
+  .lt-logo {
+    display: flex; align-items: center; gap: 14px;
+    text-decoration: none;
   }
-
-  .s-logo-mark {
-    width: 28px; height: 28px;
-    border: 1px solid var(--gold);
-    border-radius: 50%;
+  .lt-logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #D4A843, #9B6F1E);
+    border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 20px rgba(212,168,67,0.3), 0 4px 12px rgba(0,0,0,0.4);
     position: relative;
   }
-  .s-logo-mark::after {
+  .lt-logo-icon::after {
     content: '';
-    width: 6px; height: 6px;
-    background: var(--gold);
-    border-radius: 50%;
-    box-shadow: 0 0 8px var(--gold);
+    position: absolute; inset: -1px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, rgba(212,168,67,0.4), transparent);
+    pointer-events: none;
   }
-
-  .s-nav-links { display: flex; gap: 4px; }
-
-  .s-nav-btn {
-    background: none; border: none;
-    font-family: 'Syne', sans-serif;
-    font-size: 11px; font-weight: 500;
-    color: var(--text-dim); cursor: pointer;
-    padding: 8px 18px; border-radius: 2px;
-    letter-spacing: 1.5px; text-transform: uppercase;
-    transition: color 0.2s, background 0.2s;
-  }
-  .s-nav-btn:hover { color: var(--text); background: rgba(255,255,255,0.04); }
-  .s-nav-btn.active { color: var(--gold); }
-
-  .s-nav-back {
-    background: none;
-    border: 1px solid var(--border-bright);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; color: var(--text-dim);
-    padding: 7px 14px; border-radius: 2px;
-    cursor: pointer; letter-spacing: 1px;
-    transition: all 0.2s;
-  }
-  .s-nav-back:hover { border-color: var(--gold); color: var(--gold); }
-
-  /* BODY */
-  .s-body {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 120px 48px 100px;
-    position: relative; z-index: 1;
-  }
-
-  /* HEADER */
-  .s-header { margin-bottom: 72px; }
-
-  .s-eyebrow {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; letter-spacing: 3px;
-    color: var(--gold); text-transform: uppercase;
-    margin-bottom: 20px;
-    display: flex; align-items: center; gap: 12px;
-  }
-  .s-eyebrow::before {
-    content: '';
-    width: 32px; height: 1px;
-    background: var(--gold);
-    opacity: 0.6;
-  }
-
-  .s-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 72px; line-height: 0.95;
-    font-weight: 300; letter-spacing: -1px;
-    color: var(--text);
-    margin-bottom: 20px;
-  }
-  .s-title em {
-    font-style: italic;
-    background: linear-gradient(135deg, #C9A84C, #E8D5A0, #C9A84C);
+  .lt-logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px; font-weight: 500;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, #E8EBF2, #D4A843);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  .s-subtitle {
-    font-size: 14px; color: var(--text-dim);
-    font-weight: 400; letter-spacing: 0.5px;
-    line-height: 1.6;
-  }
+  .lt-nav-center { display: flex; gap: 2px; }
 
-  /* INPUT */
-  .s-input-wrap {
-    background: var(--bg2);
-    border: 1px solid var(--border-bright);
-    border-radius: 4px;
-    display: flex;
-    margin-bottom: 12px;
-    transition: border-color 0.3s, box-shadow 0.3s;
-  }
-  .s-input-wrap:focus-within {
-    border-color: rgba(201,168,76,0.4);
-    box-shadow: 0 0 0 1px rgba(201,168,76,0.1), 0 8px 32px rgba(0,0,0,0.4);
-  }
-
-  .s-textarea {
-    flex: 1; background: none;
-    border: none; outline: none;
-    color: var(--text); font-size: 15px;
-    font-family: 'Syne', sans-serif;
-    font-weight: 400;
-    resize: none; padding: 22px 28px;
-    line-height: 1.7; letter-spacing: 0.2px;
-  }
-  .s-textarea::placeholder { color: var(--text-faint); }
-
-  .s-send-btn {
-    background: linear-gradient(135deg, #C9A84C, #A8873A);
-    color: #080A0F;
-    border: none; width: 60px;
-    cursor: pointer; font-size: 20px; font-weight: 700;
-    flex-shrink: 0; border-radius: 0 3px 3px 0;
+  .lt-nav-btn {
+    background: none; border: none;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px; font-weight: 400;
+    color: var(--text-mid); cursor: pointer;
+    padding: 9px 20px; border-radius: 8px;
+    letter-spacing: 0.3px;
     transition: all 0.2s;
-    display: flex; align-items: center; justify-content: center;
+    position: relative;
   }
-  .s-send-btn:hover:not(:disabled) {
-    background: linear-gradient(135deg, #DDB95A, #C9A84C);
-    box-shadow: 0 0 24px rgba(201,168,76,0.3);
+  .lt-nav-btn:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+  .lt-nav-btn.active {
+    color: var(--text);
+    background: rgba(212,168,67,0.08);
   }
-  .s-send-btn:disabled { background: rgba(255,255,255,0.07); color: var(--text-faint); cursor: not-allowed; }
-
-  /* CATEGORIES */
-  .s-cats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px; margin-bottom: 64px;
-  }
-
-  .s-cat {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 4px; padding: 18px 14px;
-    text-align: center; cursor: pointer;
-    transition: all 0.2s;
-    position: relative; overflow: hidden;
-  }
-  .s-cat::after {
+  .lt-nav-btn.active::after {
     content: '';
-    position: absolute; bottom: 0; left: 0; right: 0;
-    height: 2px; background: var(--gold);
-    transform: scaleX(0); transition: transform 0.2s;
-  }
-  .s-cat:hover { border-color: var(--border-bright); background: var(--bg3); }
-  .s-cat:hover::after { transform: scaleX(1); }
-  .s-cat.active { border-color: rgba(201,168,76,0.3); background: var(--gold-glow); }
-  .s-cat.active::after { transform: scaleX(1); }
-  .s-cat.active .s-cat-name { color: var(--gold); }
-
-  .s-cat-icon { font-size: 22px; margin-bottom: 8px; }
-  .s-cat-name { font-size: 11px; font-weight: 700; color: var(--text); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
-  .s-cat-sub { font-size: 9px; color: var(--text-faint); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px; }
-
-  /* LOADING */
-  .s-loading {
-    text-align: center; padding: 80px 0;
-    border-top: 1px solid var(--border);
-  }
-  .s-loading-ring {
-    width: 48px; height: 48px;
-    border: 1px solid var(--border-bright);
-    border-top-color: var(--gold);
-    border-radius: 50%;
-    margin: 0 auto 24px;
-    animation: spin 1s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .s-loading-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; color: var(--text-dim);
-    letter-spacing: 3px; text-transform: uppercase;
-    animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-
-  /* ERROR */
-  .s-error {
-    background: rgba(248,113,113,0.06);
-    border: 1px solid rgba(248,113,113,0.2);
-    border-radius: 4px; padding: 14px 20px;
-    color: var(--red); font-size: 11px;
-    margin-bottom: 24px;
-    font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.5px;
+    position: absolute; bottom: 4px; left: 50%;
+    transform: translateX(-50%);
+    width: 20px; height: 2px;
+    background: var(--gold);
+    border-radius: 1px;
   }
 
-  /* RESULTS */
-  .s-results {
-    animation: fadeUp 0.5s ease both;
+  .lt-nav-back {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border-md);
+    font-family: 'Outfit', sans-serif;
+    font-size: 12px; font-weight: 500;
+    color: var(--text-mid);
+    padding: 8px 16px; border-radius: 8px;
+    cursor: pointer; letter-spacing: 0.3px;
+    transition: all 0.2s;
   }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(24px); }
+  .lt-nav-back:hover { color: var(--text); border-color: var(--border-hi); background: rgba(255,255,255,0.07); }
+
+  /* ── MAIN BODY ── */
+  .lt-body {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 110px 48px 100px;
+    position: relative; z-index: 1;
+  }
+
+  /* ── HERO HEADER ── */
+  .lt-hero {
+    margin-bottom: 64px;
+    animation: heroIn 0.8s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  @keyframes heroIn {
+    from { opacity: 0; transform: translateY(32px); }
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  .s-divider {
-    display: flex; align-items: center; gap: 16px;
-    margin-bottom: 48px;
+  .lt-hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--gold-dim);
+    border: 1px solid rgba(212,168,67,0.2);
+    border-radius: 100px;
+    padding: 6px 16px 6px 8px;
+    margin-bottom: 28px;
   }
-  .s-divider-line { flex: 1; height: 1px; background: var(--border-bright); }
-  .s-divider-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px; color: var(--gold);
-    letter-spacing: 3px; text-transform: uppercase;
+  .lt-hero-badge-dot {
+    width: 6px; height: 6px;
+    background: var(--gold);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--gold-glow);
+    animation: dotPulse 2s ease-in-out infinite;
+  }
+  @keyframes dotPulse {
+    0%, 100% { box-shadow: 0 0 8px var(--gold-glow); }
+    50%       { box-shadow: 0 0 16px var(--gold), 0 0 32px rgba(212,168,67,0.3); }
+  }
+  .lt-hero-badge-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 2px;
+    color: var(--gold); text-transform: uppercase;
   }
 
-  .s-question-block { margin-bottom: 48px; }
-  .s-question-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px; letter-spacing: 3px;
-    color: var(--text-faint); text-transform: uppercase;
-    margin-bottom: 12px;
+  .lt-hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 68px; line-height: 1.0;
+    font-weight: 700; letter-spacing: -1px;
+    color: var(--text);
+    margin-bottom: 20px;
   }
-  .s-question-text {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 32px; line-height: 1.3;
-    font-weight: 300; font-style: italic;
+  .lt-hero-title .line2 {
+    display: block;
+    background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 40%, #9B6F1E 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-style: italic;
+  }
+
+  .lt-hero-sub {
+    font-size: 16px; color: var(--text-mid);
+    font-weight: 300; line-height: 1.7;
+    max-width: 520px; letter-spacing: 0.2px;
+  }
+
+  /* ── INPUT AREA ── */
+  .lt-input-section {
+    margin-bottom: 20px;
+    animation: heroIn 0.8s cubic-bezier(0.22,1,0.36,1) 0.1s both;
+  }
+
+  .lt-input-outer {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border-md);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  }
+  .lt-input-outer:focus-within {
+    border-color: rgba(212,168,67,0.35);
+    box-shadow: 0 0 0 4px rgba(212,168,67,0.06), 0 8px 40px rgba(0,0,0,0.4);
+  }
+
+  .lt-textarea {
+    width: 100%; background: none;
+    border: none; outline: none;
+    color: var(--text); font-size: 16px;
+    font-family: 'Outfit', sans-serif; font-weight: 300;
+    resize: none; padding: 24px 100px 24px 28px;
+    line-height: 1.7; letter-spacing: 0.2px;
+    min-height: 88px;
+  }
+  .lt-textarea::placeholder { color: var(--text-low); }
+
+  .lt-submit-btn {
+    position: absolute; right: 12px; top: 50%;
+    transform: translateY(-50%);
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    color: #04060C;
+    border: none; border-radius: 12px;
+    cursor: pointer; font-size: 20px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s;
+    box-shadow: 0 4px 16px rgba(212,168,67,0.3);
+  }
+  .lt-submit-btn:hover:not(:disabled) {
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 8px 28px rgba(212,168,67,0.45);
+  }
+  .lt-submit-btn:disabled {
+    background: rgba(255,255,255,0.06);
+    color: var(--text-low);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  .lt-input-hint {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; color: var(--text-low);
+    letter-spacing: 1px; text-align: right;
+    margin-top: 8px; padding-right: 4px;
+  }
+
+  /* ── CATEGORY PILLS ── */
+  .lt-cats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px; margin-bottom: 72px;
+    animation: heroIn 0.8s cubic-bezier(0.22,1,0.36,1) 0.15s both;
+  }
+
+  .lt-cat {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 14px;
+    text-align: center; cursor: pointer;
+    transition: all 0.25s;
+    position: relative; overflow: hidden;
+  }
+  .lt-cat::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--gold-dim), transparent);
+    opacity: 0; transition: opacity 0.25s;
+  }
+  .lt-cat:hover { border-color: var(--border-hi); transform: translateY(-2px); }
+  .lt-cat:hover::before { opacity: 0.5; }
+  .lt-cat.active {
+    border-color: rgba(212,168,67,0.3);
+    background: linear-gradient(135deg, rgba(212,168,67,0.08), rgba(212,168,67,0.03));
+    box-shadow: 0 0 24px rgba(212,168,67,0.08), 0 4px 16px rgba(0,0,0,0.3);
+  }
+  .lt-cat.active::before { opacity: 1; }
+  .lt-cat.active .lt-cat-name { color: var(--gold); }
+  .lt-cat.active .lt-cat-bottom { background: var(--gold); transform: scaleX(1); }
+
+  .lt-cat-bottom {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--gold);
+    transform: scaleX(0);
+    transition: transform 0.25s;
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+  .lt-cat:hover .lt-cat-bottom { transform: scaleX(0.5); }
+
+  .lt-cat-icon { font-size: 24px; margin-bottom: 10px; display: block; }
+  .lt-cat-name {
+    font-size: 12px; font-weight: 600;
+    color: var(--text); letter-spacing: 0.8px;
+    text-transform: uppercase; margin-bottom: 4px;
+    transition: color 0.25s;
+  }
+  .lt-cat-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: var(--text-low);
+    letter-spacing: 0.5px;
+  }
+
+  /* ── LOADING STATE ── */
+  .lt-loading {
+    text-align: center; padding: 100px 0;
+    animation: heroIn 0.4s ease both;
+  }
+  .lt-loading-orb {
+    width: 64px; height: 64px;
+    margin: 0 auto 32px;
+    position: relative;
+  }
+  .lt-loading-orb::before, .lt-loading-orb::after {
+    content: '';
+    position: absolute; border-radius: 50%;
+    animation: spin 1.4s linear infinite;
+  }
+  .lt-loading-orb::before {
+    inset: 0;
+    border: 1px solid transparent;
+    border-top-color: var(--gold);
+    border-right-color: rgba(212,168,67,0.3);
+  }
+  .lt-loading-orb::after {
+    inset: 8px;
+    border: 1px solid transparent;
+    border-top-color: rgba(212,168,67,0.5);
+    animation-direction: reverse;
+    animation-duration: 0.9s;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .lt-loading-dot {
+    width: 8px; height: 8px;
+    background: var(--gold);
+    border-radius: 50%;
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    box-shadow: 0 0 12px var(--gold);
+    animation: dotPulse 1.4s ease-in-out infinite;
+  }
+  .lt-loading-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px; font-weight: 400; font-style: italic;
+    color: var(--text); margin-bottom: 10px;
+  }
+  .lt-loading-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 2.5px;
+    color: var(--text-low); text-transform: uppercase;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── ERROR ── */
+  .lt-error {
+    background: rgba(251,113,133,0.06);
+    border: 1px solid rgba(251,113,133,0.18);
+    border-radius: var(--radius);
+    padding: 16px 22px;
+    color: var(--red); font-size: 13px;
+    margin-bottom: 28px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.3px;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  /* ── RESULTS ── */
+  .lt-results {
+    animation: heroIn 0.7s cubic-bezier(0.22,1,0.36,1) both;
+  }
+
+  .lt-section-divider {
+    display: flex; align-items: center; gap: 20px;
+    margin-bottom: 52px;
+  }
+  .lt-section-line {
+    flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-hi), transparent);
+  }
+  .lt-section-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--gold-dim);
+    border: 1px solid rgba(212,168,67,0.18);
+    border-radius: 100px;
+    padding: 5px 16px;
+  }
+  .lt-section-chip span {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 2px;
+    color: var(--gold); text-transform: uppercase;
+  }
+
+  /* Question display */
+  .lt-q-block { margin-bottom: 48px; }
+  .lt-q-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; letter-spacing: 3px;
+    color: var(--text-low); text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .lt-q-label::before {
+    content: ''; width: 20px; height: 1px; background: var(--text-low);
+  }
+  .lt-q-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 30px; line-height: 1.35;
+    font-weight: 400; font-style: italic;
     color: var(--text); letter-spacing: -0.3px;
   }
 
-  /* ANALYSIS */
-  .s-analysis {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-left: 2px solid var(--gold);
-    border-radius: 0 4px 4px 0;
-    padding: 32px 36px;
-    margin-bottom: 56px;
-    display: flex; gap: 36px;
+  /* Analysis block */
+  .lt-analysis {
+    position: relative;
+    background: linear-gradient(135deg, rgba(212,168,67,0.04), rgba(212,168,67,0.01));
+    border: 1px solid rgba(212,168,67,0.12);
+    border-radius: 16px;
+    padding: 36px 40px;
+    margin-bottom: 52px;
+    overflow: hidden;
   }
-  .s-analysis-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px; letter-spacing: 2px;
+  .lt-analysis::before {
+    content: '"';
+    position: absolute; top: -20px; left: 28px;
+    font-family: 'Playfair Display', serif;
+    font-size: 120px; color: rgba(212,168,67,0.07);
+    line-height: 1; pointer-events: none;
+  }
+  .lt-analysis-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+  }
+  .lt-analysis-avatar {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--gold), #9B6F1E);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    box-shadow: 0 0 16px rgba(212,168,67,0.3);
+  }
+  .lt-analysis-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 2px;
     color: var(--gold); text-transform: uppercase;
-    white-space: nowrap; padding-top: 3px; min-width: 90px;
   }
-  .s-analysis-text {
-    font-size: 15px; color: rgba(240,237,232,0.7);
-    line-height: 1.9; font-weight: 400;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 18px; letter-spacing: 0.1px;
+  .lt-analysis-text {
+    font-size: 16px; color: rgba(232,235,242,0.75);
+    line-height: 1.85; font-weight: 300; letter-spacing: 0.2px;
+    font-family: 'Outfit', sans-serif;
   }
 
-  /* PATHS */
-  .s-paths-header {
-    display: flex; align-items: center;
-    justify-content: space-between; margin-bottom: 16px;
-  }
-  .s-paths-label {
-    font-family: 'JetBrains Mono', monospace;
+  /* ── PATH CARDS ── */
+  .lt-paths-title {
+    font-family: 'Space Mono', monospace;
     font-size: 9px; letter-spacing: 3px;
-    color: var(--text-faint); text-transform: uppercase;
+    color: var(--text-low); text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
   }
+  .lt-paths-title::before { content: ''; width: 20px; height: 1px; background: var(--text-low); }
 
-  .s-paths {
+  .lt-paths {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 14px;
+    margin-bottom: 14px;
   }
 
-  .s-path-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 28px 24px;
+  .lt-path-card {
+    border-radius: 16px;
+    padding: 30px 26px;
     position: relative; overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-  }
-  .s-path-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 16px 48px rgba(0,0,0,0.4);
-    border-color: var(--border-bright);
-  }
-  .s-path-card::before {
-    content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: transparent;
-    transition: background 0.2s;
-  }
-  .s-path-card.safe::before { background: linear-gradient(90deg, transparent, #4ADE80, transparent); }
-  .s-path-card.risky::before { background: linear-gradient(90deg, transparent, #F87171, transparent); }
-  .s-path-card.optimal {
-    background: linear-gradient(145deg, #0F1320, #141828);
-    border-color: rgba(201,168,76,0.25);
-    box-shadow: 0 0 40px rgba(201,168,76,0.06), inset 0 1px 0 rgba(201,168,76,0.1);
-  }
-  .s-path-card.optimal::before { background: linear-gradient(90deg, transparent, var(--gold), transparent); }
-  .s-path-card.optimal:hover {
-    border-color: rgba(201,168,76,0.4);
-    box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 60px rgba(201,168,76,0.1);
+    transition: transform 0.3s cubic-bezier(0.22,1,0.36,1), box-shadow 0.3s;
+    cursor: default;
   }
 
-  /* Optimal shimmer */
-  .s-path-card.optimal::after {
-    content: '';
-    position: absolute; top: 0; left: -100%;
-    width: 60%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(201,168,76,0.03), transparent);
-    animation: shimmer 3s ease-in-out infinite;
+  .lt-path-card.safe {
+    background: linear-gradient(145deg, #0A1018, #081014);
+    border: 1px solid rgba(52,211,153,0.15);
   }
-  @keyframes shimmer { 0% { left: -100%; } 100% { left: 200%; } }
+  .lt-path-card.safe::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, var(--green), transparent);
+  }
+  .lt-path-card.safe:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 48px rgba(0,0,0,0.5), 0 0 32px rgba(52,211,153,0.08);
+  }
 
-  .s-path-badge {
+  .lt-path-card.risky {
+    background: linear-gradient(145deg, #10080A, #140810);
+    border: 1px solid rgba(251,113,133,0.15);
+  }
+  .lt-path-card.risky::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+  }
+  .lt-path-card.risky:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 48px rgba(0,0,0,0.5), 0 0 32px rgba(251,113,133,0.08);
+  }
+
+  .lt-path-card.optimal {
+    background: linear-gradient(145deg, #100D04, #0E0C08, #141008);
+    border: 1px solid rgba(212,168,67,0.25);
+    box-shadow: 0 0 48px rgba(212,168,67,0.07), inset 0 1px 0 rgba(212,168,67,0.12);
+  }
+  .lt-path-card.optimal::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent 0%, var(--gold-light) 50%, transparent 100%);
+    box-shadow: 0 0 20px var(--gold-glow);
+  }
+  .lt-path-card.optimal:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 60px rgba(212,168,67,0.12);
+  }
+
+  /* Shimmer on optimal */
+  .lt-path-card.optimal::after {
+    content: '';
+    position: absolute; top: 0; left: -150%;
+    width: 80%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(212,168,67,0.04), transparent);
+    animation: cardShimmer 4s ease-in-out infinite;
+  }
+  @keyframes cardShimmer { 0%{left:-150%} 100%{left:200%} }
+
+  .lt-path-badge {
     display: inline-flex; align-items: center; gap: 6px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Space Mono', monospace;
     font-size: 9px; letter-spacing: 1.5px;
-    text-transform: uppercase; margin-bottom: 20px;
-    padding: 4px 10px; border-radius: 2px;
+    text-transform: uppercase; margin-bottom: 22px;
+    padding: 5px 12px; border-radius: 100px;
   }
-  .s-path-badge.safe { background: rgba(74,222,128,0.08); color: #4ADE80; border: 1px solid rgba(74,222,128,0.15); }
-  .s-path-badge.risky { background: rgba(248,113,113,0.08); color: #F87171; border: 1px solid rgba(248,113,113,0.15); }
-  .s-path-badge.optimal { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(201,168,76,0.25); }
+  .lt-path-badge.safe   { background: rgba(52,211,153,0.08); color: var(--green); border: 1px solid rgba(52,211,153,0.18); }
+  .lt-path-badge.risky  { background: rgba(251,113,133,0.08); color: var(--red);   border: 1px solid rgba(251,113,133,0.18); }
+  .lt-path-badge.optimal{ background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(212,168,67,0.25); }
 
-  .s-path-name {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 24px; font-weight: 400; letter-spacing: -0.3px;
-    color: var(--text); margin-bottom: 10px; line-height: 1.2;
-  }
-  .s-path-card.optimal .s-path-name { color: #F0EDE8; }
-
-  .s-path-desc {
-    font-size: 12px; color: var(--text-dim);
-    line-height: 1.75; margin-bottom: 28px; font-weight: 400;
-    letter-spacing: 0.2px;
+  .lt-path-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px; font-weight: 500;
+    letter-spacing: -0.3px; color: var(--text);
+    margin-bottom: 10px; line-height: 1.2;
   }
 
-  .s-path-prob-wrap { margin-bottom: 24px; }
-  .s-path-prob {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 64px; font-weight: 300;
-    color: var(--text); line-height: 1;
-    letter-spacing: -2px;
+  .lt-path-desc {
+    font-size: 12px; color: var(--text-mid);
+    line-height: 1.8; margin-bottom: 28px;
+    font-weight: 300; letter-spacing: 0.2px;
   }
-  .s-path-card.optimal .s-path-prob { color: var(--gold); }
-  .s-path-prob-pct {
-    font-family: 'Syne', sans-serif;
-    font-size: 18px; font-weight: 400;
-    vertical-align: super;
-    margin-left: 2px;
+
+  .lt-path-prob-row { margin-bottom: 24px; }
+  .lt-path-prob {
+    font-family: 'Playfair Display', serif;
+    font-size: 60px; font-weight: 700;
+    line-height: 1; letter-spacing: -3px;
   }
-  .s-path-prob-label {
-    font-family: 'JetBrains Mono', monospace;
+  .lt-path-card.safe    .lt-path-prob { color: var(--green); }
+  .lt-path-card.risky   .lt-path-prob { color: var(--red);   }
+  .lt-path-card.optimal .lt-path-prob {
+    background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .lt-path-prob sup {
+    font-family: 'Outfit', sans-serif;
+    font-size: 22px; font-weight: 400;
+    vertical-align: super; letter-spacing: 0;
+  }
+  .lt-path-prob-label {
+    font-family: 'Space Mono', monospace;
     font-size: 9px; letter-spacing: 2px;
-    color: var(--text-faint); text-transform: uppercase;
-    margin-top: 4px;
+    color: var(--text-low); text-transform: uppercase; margin-top: 4px;
   }
 
-  .s-path-divider { height: 1px; background: var(--border); margin-bottom: 16px; }
-  .s-path-card.optimal .s-path-divider { background: rgba(201,168,76,0.12); }
+  .lt-path-rule {
+    height: 1px;
+    background: rgba(255,255,255,0.05);
+    margin-bottom: 18px;
+  }
+  .lt-path-card.optimal .lt-path-rule { background: rgba(212,168,67,0.1); }
 
-  .s-path-stat {
+  .lt-path-stat {
     display: flex; justify-content: space-between;
-    align-items: center; margin-bottom: 10px;
+    align-items: center; margin-bottom: 11px;
   }
-  .s-path-stat-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 8px; color: var(--text-faint);
+  .lt-path-stat-k {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px; color: var(--text-low);
     letter-spacing: 1.5px; text-transform: uppercase;
   }
-  .s-path-stat-val { font-size: 12px; font-weight: 600; color: var(--text); letter-spacing: 0.3px; }
-  .s-path-card.optimal .s-path-stat-val { color: rgba(240,237,232,0.9); }
-
-  /* BOTTOM */
-  .s-bottom {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+  .lt-path-stat-v {
+    font-size: 12px; font-weight: 600;
+    color: var(--text); letter-spacing: 0.3px;
   }
 
-  .s-regret-block, .s-insight-block {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 36px;
+  /* ── BOTTOM ROW ── */
+  .lt-bottom {
+    display: grid;
+    grid-template-columns: 5fr 7fr;
+    gap: 14px;
+  }
+
+  .lt-regret-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-md);
+    border-radius: 16px; padding: 36px;
+    position: relative; overflow: hidden;
     transition: border-color 0.2s;
   }
-  .s-regret-block:hover, .s-insight-block:hover { border-color: var(--border-bright); }
+  .lt-regret-card:hover { border-color: var(--border-hi); }
 
-  .s-block-label {
-    font-family: 'JetBrains Mono', monospace;
+  .lt-insight-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-md);
+    border-radius: 16px; padding: 36px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .lt-insight-card:hover { border-color: var(--border-hi); }
+
+  .lt-card-label {
+    font-family: 'Space Mono', monospace;
     font-size: 9px; letter-spacing: 3px;
-    color: var(--text-faint); text-transform: uppercase; margin-bottom: 20px;
+    color: var(--text-low); text-transform: uppercase; margin-bottom: 22px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .lt-card-label::before { content: ''; width: 16px; height: 1px; background: var(--text-low); }
+
+  .lt-regret-big {
+    font-family: 'Playfair Display', serif;
+    font-size: 88px; font-weight: 700;
+    letter-spacing: -4px; line-height: 1;
+    margin-bottom: 14px;
+  }
+  .lt-regret-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 6px 14px;
+    border-radius: 100px; margin-bottom: 18px;
+  }
+  .lt-regret-pill::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+  }
+  .lt-regret-desc {
+    font-size: 13px; color: var(--text-mid);
+    line-height: 1.8; font-weight: 300; letter-spacing: 0.2px;
   }
 
-  .s-regret-num {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 80px; font-weight: 300;
-    letter-spacing: -3px; line-height: 1;
-    margin-bottom: 12px;
-  }
-
-  .s-regret-badge {
-    display: inline-block;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px; letter-spacing: 2px;
-    text-transform: uppercase; padding: 4px 12px;
-    border-radius: 2px; margin-bottom: 16px;
-  }
-
-  .s-regret-desc {
-    font-size: 13px; color: var(--text-dim);
-    line-height: 1.8; font-weight: 400; letter-spacing: 0.2px;
-  }
-
-  .s-rec-badge {
-    display: inline-block;
+  .lt-rec-tag {
+    display: inline-flex; align-items: center; gap: 8px;
     background: var(--gold-dim);
-    border: 1px solid rgba(201,168,76,0.2);
+    border: 1px solid rgba(212,168,67,0.2);
     color: var(--gold);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'Space Mono', monospace;
     font-size: 9px; letter-spacing: 2px;
     text-transform: uppercase;
-    padding: 5px 12px; border-radius: 2px; margin-bottom: 16px;
+    padding: 6px 14px; border-radius: 100px; margin-bottom: 18px;
+  }
+  .lt-rec-tag::before {
+    content: '★'; font-size: 10px;
   }
 
-  .s-insight-text {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 18px; color: rgba(240,237,232,0.75);
-    line-height: 1.8; font-weight: 300; letter-spacing: 0.1px;
+  .lt-insight-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px; color: rgba(232,235,242,0.7);
+    line-height: 1.85; font-weight: 400; letter-spacing: 0.1px;
   }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background: rgba(212,168,67,0.2); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(212,168,67,0.4); }
 `
 
 export default function Simulate() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [question, setQuestion] = useState('')
-  const [category, setCategory] = useState('general')
+  const [category, setCategory] = useState('career')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
+  const resultsRef = useRef(null)
 
   const categories = [
-    { id: 'career',        icon: '💼', name: 'Career',    sub: 'Job · Promotions' },
-    { id: 'finance',       icon: '◈',  name: 'Finance',   sub: 'Money · Investing' },
-    { id: 'relationships', icon: '○',  name: 'Relations', sub: 'Love · Family' },
-    { id: 'health',        icon: '◇',  name: 'Health',    sub: 'Fitness · Wellness' },
+    { id: 'career',        icon: '🧭', name: 'Career',    sub: 'Job · Growth' },
+    { id: 'finance',       icon: '💎', name: 'Finance',   sub: 'Wealth · Investing' },
+    { id: 'relationships', icon: '🌹', name: 'Love',      sub: 'Relations · Family' },
+    { id: 'health',        icon: '⚡', name: 'Health',    sub: 'Fitness · Mind' },
   ]
 
   const runSimulation = async () => {
@@ -534,33 +773,45 @@ export default function Simulate() {
         recommended_path: parsed.recommended_path
       })
     } catch (err) {
-      setError('Simulation failed. Please try again.')
+      setError('Simulation failed. Please check your connection and try again.')
       console.error(err)
     }
     setLoading(false)
   }
 
+  useEffect(() => {
+    if (result && resultsRef.current) {
+      setTimeout(() => resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+    }
+  }, [result])
+
   const rs = result?.regret_score ?? 0
-  const regretColor = rs < 20 ? 'var(--green)' : rs < 50 ? 'var(--amber)' : 'var(--red)'
-  const regretBg = rs < 20 ? 'rgba(74,222,128,0.08)' : rs < 50 ? 'rgba(251,191,36,0.08)' : 'rgba(248,113,113,0.08)'
-  const regretBorder = rs < 20 ? 'rgba(74,222,128,0.2)' : rs < 50 ? 'rgba(251,191,36,0.2)' : 'rgba(248,113,113,0.2)'
-  const regretLabel = rs < 20 ? 'Low Risk' : rs < 50 ? 'Moderate' : 'High Risk'
-  const regretDesc = rs < 20
-    ? 'Strong alignment with your long-term values. The optimal path carries minimal risk of future regret.'
+  const regretColor  = rs < 20 ? 'var(--green)' : rs < 50 ? 'var(--amber)' : 'var(--red)'
+  const regretBg     = rs < 20 ? 'rgba(52,211,153,0.08)' : rs < 50 ? 'rgba(252,211,77,0.08)' : 'rgba(251,113,133,0.08)'
+  const regretBorder = rs < 20 ? 'rgba(52,211,153,0.2)'  : rs < 50 ? 'rgba(252,211,77,0.2)'  : 'rgba(251,113,133,0.2)'
+  const regretLabel  = rs < 20 ? 'Low Risk' : rs < 50 ? 'Moderate' : 'High Risk'
+  const regretDesc   = rs < 20
+    ? 'Excellent alignment with your long-term values. This path carries minimal risk of future regret and high satisfaction potential.'
     : rs < 50
-    ? 'Some uncertainty ahead. Proceed with intention and revisit the recommended path regularly.'
-    : 'Significant regret risk detected. Consider the safe path and consult trusted advisors before deciding.'
+    ? 'Some uncertainty lies ahead. Proceed with clear intention and revisit your recommended path quarterly.'
+    : 'Significant regret risk detected. Strongly consider the safe path and consult trusted advisors before committing.'
 
   return (
-    <div className="s-root">
+    <div className="lt-root">
       <style>{styles}</style>
 
-      <nav className="s-nav">
-        <div className="s-logo">
-          <div className="s-logo-mark" />
-          LifeTwin
+      {/* Background orbs */}
+      <div className="lt-bg-orb lt-bg-orb-1" />
+      <div className="lt-bg-orb lt-bg-orb-2" />
+      <div className="lt-bg-orb lt-bg-orb-3" />
+
+      {/* Navbar */}
+      <nav className="lt-nav">
+        <div className="lt-logo">
+          <div className="lt-logo-icon">🧬</div>
+          <span className="lt-logo-text">LifeTwin</span>
         </div>
-        <div className="s-nav-links">
+        <div className="lt-nav-center">
           {[
             { label: 'Dashboard', path: '/dashboard' },
             { label: 'Simulate',  path: '/simulate'  },
@@ -568,109 +819,141 @@ export default function Simulate() {
             { label: 'Insights',  path: '/insights'  },
           ].map(item => (
             <button key={item.path}
-              className={`s-nav-btn ${item.path === '/simulate' ? 'active' : ''}`}
+              className={`lt-nav-btn ${item.path === '/simulate' ? 'active' : ''}`}
               onClick={() => navigate(item.path)}
             >{item.label}</button>
           ))}
         </div>
-        <button className="s-nav-back" onClick={() => navigate('/dashboard')}>← Dashboard</button>
+        <button className="lt-nav-back" onClick={() => navigate('/dashboard')}>
+          ← Dashboard
+        </button>
       </nav>
 
-      <div className="s-body">
-        <div className="s-header">
-          <div className="s-eyebrow">Life Simulation Engine</div>
-          <h1 className="s-title">
-            What's your<br /><em>next move?</em>
+      <div className="lt-body">
+
+        {/* Hero */}
+        <div className="lt-hero">
+          <div className="lt-hero-badge">
+            <div className="lt-hero-badge-dot" />
+            <span className="lt-hero-badge-text">AI-Powered Life Engine</span>
+          </div>
+          <h1 className="lt-hero-title">
+            Simulate your<br />
+            <span className="line2">future, today.</span>
           </h1>
-          <p className="s-subtitle">Ask your digital twin anything — career, finance, relationships, health.</p>
+          <p className="lt-hero-sub">
+            Ask your digital twin anything — career pivots, financial moves, relationships, health. Get three data-driven paths with real probabilities.
+          </p>
         </div>
 
-        <div className="s-input-wrap">
-          <textarea
-            className="s-textarea"
-            value={question}
-            onChange={e => setQuestion(e.target.value)}
-            placeholder="e.g. What happens if I quit my job and go freelance in 6 months?"
-            rows={2}
-            onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) runSimulation() }}
-          />
-          <button className="s-send-btn" onClick={runSimulation} disabled={loading || !question.trim()}>
-            {loading ? '◌' : '→'}
-          </button>
+        {/* Input */}
+        <div className="lt-input-section">
+          <div className="lt-input-outer">
+            <textarea
+              className="lt-textarea"
+              value={question}
+              onChange={e => setQuestion(e.target.value)}
+              placeholder="e.g. What happens if I quit my job and start freelancing in 6 months?"
+              rows={2}
+              onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) runSimulation() }}
+            />
+            <button className="lt-submit-btn" onClick={runSimulation} disabled={loading || !question.trim()}>
+              {loading ? '◌' : '→'}
+            </button>
+          </div>
+          <div className="lt-input-hint">Press ⌘ + Enter to simulate</div>
         </div>
 
-        <div className="s-cats">
+        {/* Categories */}
+        <div className="lt-cats">
           {categories.map(cat => (
             <div key={cat.id}
-              className={`s-cat ${category === cat.id ? 'active' : ''}`}
+              className={`lt-cat ${category === cat.id ? 'active' : ''}`}
               onClick={() => setCategory(cat.id)}
             >
-              <div className="s-cat-icon">{cat.icon}</div>
-              <div className="s-cat-name">{cat.name}</div>
-              <div className="s-cat-sub">{cat.sub}</div>
+              <div className="lt-cat-bottom" />
+              <span className="lt-cat-icon">{cat.icon}</span>
+              <div className="lt-cat-name">{cat.name}</div>
+              <div className="lt-cat-sub">{cat.sub}</div>
             </div>
           ))}
         </div>
 
+        {/* Loading */}
         {loading && (
-          <div className="s-loading">
-            <div className="s-loading-ring" />
-            <div className="s-loading-label">Simulating your future</div>
+          <div className="lt-loading">
+            <div className="lt-loading-orb">
+              <div className="lt-loading-dot" />
+            </div>
+            <div className="lt-loading-title">Your twin is thinking...</div>
+            <div className="lt-loading-sub">Building your simulation</div>
           </div>
         )}
 
-        {error && <div className="s-error">⚠ {error}</div>}
+        {/* Error */}
+        {error && (
+          <div className="lt-error">
+            <span>⚠</span> {error}
+          </div>
+        )}
 
+        {/* Results */}
         {result && (
-          <div className="s-results">
-            <div className="s-divider">
-              <div className="s-divider-line" />
-              <div className="s-divider-label">Simulation Results</div>
-              <div className="s-divider-line" />
+          <div className="lt-results" ref={resultsRef}>
+
+            <div className="lt-section-divider">
+              <div className="lt-section-line" />
+              <div className="lt-section-chip">
+                <span>Simulation Complete</span>
+              </div>
+              <div className="lt-section-line" />
             </div>
 
-            <div className="s-question-block">
-              <div className="s-question-label">Your Question</div>
-              <div className="s-question-text">"{question}"</div>
+            {/* Question echo */}
+            <div className="lt-q-block">
+              <div className="lt-q-label">Your Question</div>
+              <div className="lt-q-text">"{question}"</div>
             </div>
 
-            <div className="s-analysis">
-              <div className="s-analysis-tag">Twin Analysis</div>
-              <div className="s-analysis-text">{result.ai_analysis}</div>
+            {/* Analysis */}
+            <div className="lt-analysis">
+              <div className="lt-analysis-header">
+                <div className="lt-analysis-avatar">🧬</div>
+                <div className="lt-analysis-label">Your Twin Says</div>
+              </div>
+              <div className="lt-analysis-text">{result.ai_analysis}</div>
             </div>
 
-            <div className="s-paths-header">
-              <div className="s-paths-label">Three Possible Paths</div>
-            </div>
-
-            <div className="s-paths">
+            {/* Paths */}
+            <div className="lt-paths-title">Three Possible Paths</div>
+            <div className="lt-paths">
               {[
-                { key: 'path_a', badge: 'Safe Path',    cls: 'safe'    },
-                { key: 'path_b', badge: 'Risky Path',   cls: 'risky'   },
-                { key: 'path_c', badge: '★ Optimal',    cls: 'optimal' },
+                { key: 'path_a', badge: 'Safe Path',  cls: 'safe'    },
+                { key: 'path_b', badge: 'Risky Path', cls: 'risky'   },
+                { key: 'path_c', badge: '★ Optimal',  cls: 'optimal' },
               ].map(p => {
                 const path = result[p.key]
                 return (
-                  <div key={p.key} className={`s-path-card ${p.cls}`}>
-                    <div className={`s-path-badge ${p.cls}`}>{p.badge}</div>
-                    <div className="s-path-name">{path.name}</div>
-                    <div className="s-path-desc">{path.description}</div>
-                    <div className="s-path-prob-wrap">
-                      <div className="s-path-prob">
-                        {path.probability}<span className="s-path-prob-pct">%</span>
+                  <div key={p.key} className={`lt-path-card ${p.cls}`}>
+                    <div className={`lt-path-badge ${p.cls}`}>{p.badge}</div>
+                    <div className="lt-path-name">{path.name}</div>
+                    <div className="lt-path-desc">{path.description}</div>
+                    <div className="lt-path-prob-row">
+                      <div className="lt-path-prob">
+                        {path.probability}<sup>%</sup>
                       </div>
-                      <div className="s-path-prob-label">Success Probability</div>
+                      <div className="lt-path-prob-label">Success Probability</div>
                     </div>
-                    <div className="s-path-divider" />
+                    <div className="lt-path-rule" />
                     {[
                       ['Risk Level',  path.risk_level],
                       ['Regret Risk', `${path.regret_risk}%`],
                       ['Timeline',    path.timeline],
                       ['Happiness',   path.happiness_score],
-                    ].map(([label, val]) => (
-                      <div key={label} className="s-path-stat">
-                        <span className="s-path-stat-label">{label}</span>
-                        <span className="s-path-stat-val">{val}</span>
+                    ].map(([k, v]) => (
+                      <div key={k} className="lt-path-stat">
+                        <span className="lt-path-stat-k">{k}</span>
+                        <span className="lt-path-stat-v">{v}</span>
                       </div>
                     ))}
                   </div>
@@ -678,20 +961,21 @@ export default function Simulate() {
               })}
             </div>
 
-            <div className="s-bottom">
-              <div className="s-regret-block">
-                <div className="s-block-label">Regret Predictor</div>
-                <div className="s-regret-num" style={{ color: regretColor }}>{rs}%</div>
-                <div className="s-regret-badge" style={{ color: regretColor, background: regretBg, border: `1px solid ${regretBorder}` }}>
+            {/* Bottom row */}
+            <div className="lt-bottom">
+              <div className="lt-regret-card">
+                <div className="lt-card-label">Regret Predictor</div>
+                <div className="lt-regret-big" style={{ color: regretColor }}>{rs}%</div>
+                <div className="lt-regret-pill" style={{ color: regretColor, background: regretBg, border: `1px solid ${regretBorder}` }}>
                   {regretLabel}
                 </div>
-                <div className="s-regret-desc">{regretDesc}</div>
+                <div className="lt-regret-desc">{regretDesc}</div>
               </div>
 
-              <div className="s-insight-block">
-                <div className="s-block-label">Key Insight</div>
-                <div className="s-rec-badge">Recommended · Path {result.recommended_path}</div>
-                <div className="s-insight-text">{result.key_insight}</div>
+              <div className="lt-insight-card">
+                <div className="lt-card-label">Key Insight</div>
+                <div className="lt-rec-tag">Recommended Path {result.recommended_path}</div>
+                <div className="lt-insight-text">{result.key_insight}</div>
               </div>
             </div>
 
