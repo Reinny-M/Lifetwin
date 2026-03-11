@@ -3,6 +3,347 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 
+const styles = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .sim-root {
+    min-height: 100vh;
+    background: #F7F6F3;
+    font-family: 'DM Sans', sans-serif;
+    color: #111;
+  }
+
+  .sim-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    height: 60px;
+    background: #F7F6F3;
+    border-bottom: 1px solid #E2E0DA;
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+  }
+
+  .sim-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px; color: #111;
+    letter-spacing: -0.3px;
+  }
+
+  .sim-logo-dot {
+    width: 8px; height: 8px;
+    background: #111; border-radius: 50%;
+  }
+
+  .sim-nav-links { display: flex; gap: 0; }
+
+  .sim-nav-btn {
+    background: none; border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 400;
+    color: #999; cursor: pointer;
+    padding: 8px 16px;
+    letter-spacing: 0.3px;
+    transition: color 0.15s;
+  }
+  .sim-nav-btn:hover { color: #111; }
+  .sim-nav-btn.active { color: #111; font-weight: 600; }
+
+  .sim-back-btn {
+    background: none;
+    border: 1px solid #E2E0DA;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: #999;
+    padding: 6px 12px; border-radius: 4px;
+    cursor: pointer; letter-spacing: 0.5px;
+    transition: all 0.15s;
+  }
+  .sim-back-btn:hover { color: #111; border-color: #111; }
+
+  .sim-body {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 100px 40px 80px;
+  }
+
+  .sim-header { margin-bottom: 56px; }
+
+  .sim-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 2px;
+    color: #999; text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .sim-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 52px; line-height: 1.05;
+    letter-spacing: -1.5px; color: #111;
+    margin-bottom: 12px;
+  }
+
+  .sim-subtitle {
+    font-size: 15px; color: #888;
+    font-weight: 300;
+  }
+
+  .sim-input-wrap {
+    background: #fff;
+    border: 1px solid #E2E0DA;
+    border-radius: 4px;
+    display: flex;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+  .sim-input-wrap:focus-within { border-color: #111; }
+
+  .sim-textarea {
+    flex: 1; background: none;
+    border: none; outline: none;
+    color: #111; font-size: 15px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    resize: none; padding: 20px 24px;
+    line-height: 1.6;
+  }
+  .sim-textarea::placeholder { color: #bbb; }
+
+  .sim-send-btn {
+    background: #111; color: #F7F6F3;
+    border: none; width: 56px;
+    cursor: pointer; font-size: 18px;
+    flex-shrink: 0; border-radius: 0 3px 3px 0;
+    transition: background 0.15s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sim-send-btn:hover:not(:disabled) { background: #333; }
+  .sim-send-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+  .sim-cats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px; margin-bottom: 48px;
+  }
+
+  .sim-cat {
+    background: #fff;
+    border: 1px solid #E2E0DA;
+    border-radius: 4px; padding: 14px 12px;
+    text-align: center; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .sim-cat:hover { border-color: #111; }
+  .sim-cat.active { background: #111; border-color: #111; }
+  .sim-cat.active .sim-cat-name { color: #F7F6F3; }
+  .sim-cat.active .sim-cat-sub { color: #777; }
+
+  .sim-cat-icon { font-size: 20px; margin-bottom: 6px; }
+  .sim-cat-name { font-size: 12px; font-weight: 600; color: #111; margin-bottom: 2px; }
+  .sim-cat-sub { font-size: 10px; color: #bbb; font-family: 'DM Mono', monospace; }
+
+  .sim-loading {
+    text-align: center; padding: 72px 0;
+    border-top: 1px solid #E2E0DA;
+  }
+  .sim-loading-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; color: #999;
+    letter-spacing: 2px; text-transform: uppercase;
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  .sim-error {
+    background: #fff5f5;
+    border: 1px solid #ffd5d5;
+    border-radius: 4px; padding: 14px 18px;
+    color: #c00; font-size: 12px;
+    margin-bottom: 24px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .sim-results { border-top: 2px solid #111; padding-top: 48px; }
+
+  .sim-question-block { margin-bottom: 48px; }
+
+  .sim-question-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 2px;
+    color: #bbb; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .sim-question-text {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px; line-height: 1.3;
+    letter-spacing: -0.5px; color: #111;
+    font-style: italic;
+  }
+
+  .sim-analysis-block {
+    background: #fff;
+    border: 1px solid #E2E0DA;
+    border-radius: 4px;
+    padding: 28px 32px;
+    margin-bottom: 48px;
+    display: flex; gap: 32px; align-items: flex-start;
+  }
+
+  .sim-analysis-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; letter-spacing: 2px;
+    color: #bbb; text-transform: uppercase;
+    white-space: nowrap; padding-top: 4px;
+    min-width: 80px;
+  }
+
+  .sim-analysis-text {
+    font-size: 15px; color: #444;
+    line-height: 1.8; font-weight: 300;
+  }
+
+  .sim-paths-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; letter-spacing: 2px;
+    color: #bbb; text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .sim-paths {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: #E2E0DA;
+    border: 1px solid #E2E0DA;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1px;
+  }
+
+  .sim-path-card {
+    background: #fff;
+    padding: 28px 24px;
+    transition: background 0.2s;
+  }
+  .sim-path-card:hover { background: #FAFAF8; }
+  .sim-path-card.optimal { background: #111; }
+  .sim-path-card.optimal:hover { background: #1a1a1a; }
+  .sim-path-card.optimal .sim-path-name { color: #F7F6F3; }
+  .sim-path-card.optimal .sim-path-desc { color: #777; }
+  .sim-path-card.optimal .sim-path-prob { color: #F7F6F3; }
+  .sim-path-card.optimal .sim-path-prob-label { color: #555; }
+  .sim-path-card.optimal .sim-path-stat-label { color: #555; }
+  .sim-path-card.optimal .sim-path-stat-val { color: #F7F6F3; }
+  .sim-path-card.optimal .sim-path-divider { background: #2a2a2a; }
+  .sim-path-card.optimal .sim-path-badge { background: #F7F6F3; color: #111; border-color: #F7F6F3; }
+
+  .sim-path-badge {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+    background: #F7F6F3; color: #999;
+    border: 1px solid #E2E0DA;
+    padding: 3px 8px; border-radius: 2px;
+    margin-bottom: 20px;
+  }
+
+  .sim-path-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px; letter-spacing: -0.3px;
+    color: #111; margin-bottom: 10px; line-height: 1.2;
+  }
+
+  .sim-path-desc {
+    font-size: 12px; color: #888;
+    line-height: 1.7; margin-bottom: 24px; font-weight: 300;
+  }
+
+  .sim-path-prob {
+    font-family: 'DM Serif Display', serif;
+    font-size: 56px; letter-spacing: -2px;
+    color: #111; line-height: 1; margin-bottom: 2px;
+  }
+
+  .sim-path-prob-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; letter-spacing: 1.5px;
+    color: #bbb; text-transform: uppercase; margin-bottom: 20px;
+  }
+
+  .sim-path-divider { height: 1px; background: #F0EEE9; margin-bottom: 16px; }
+
+  .sim-path-stat {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 8px;
+  }
+
+  .sim-path-stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; color: #bbb;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+
+  .sim-path-stat-val { font-size: 12px; font-weight: 600; color: #111; }
+
+  .sim-bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: #E2E0DA;
+    border: 1px solid #E2E0DA;
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+    overflow: hidden;
+  }
+
+  .sim-regret-block, .sim-insight-block {
+    background: #fff; padding: 32px;
+  }
+
+  .sim-block-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; letter-spacing: 2px;
+    color: #bbb; text-transform: uppercase; margin-bottom: 16px;
+  }
+
+  .sim-regret-score {
+    font-family: 'DM Serif Display', serif;
+    font-size: 72px; letter-spacing: -3px; line-height: 1; margin-bottom: 8px;
+  }
+
+  .sim-regret-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding-bottom: 1px;
+  }
+
+  .sim-regret-desc {
+    font-size: 12px; color: #888;
+    line-height: 1.7; font-weight: 300; margin-top: 12px;
+  }
+
+  .sim-rec-pill {
+    display: inline-block;
+    background: #111; color: #F7F6F3;
+    font-family: 'DM Mono', monospace;
+    font-size: 9px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 4px 10px; border-radius: 2px; margin-bottom: 14px;
+  }
+
+  .sim-insight-text {
+    font-size: 14px; color: #444;
+    line-height: 1.8; font-weight: 300;
+  }
+`
+
 export default function Simulate() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -13,10 +354,10 @@ export default function Simulate() {
   const [error, setError] = useState('')
 
   const categories = [
-    { id: 'career', icon: '💼', name: 'Career', count: 'Job changes, promotions' },
-    { id: 'finance', icon: '💰', name: 'Finance', count: 'Money, investing' },
-    { id: 'relationships', icon: '❤️', name: 'Relationships', count: 'Love, family' },
-    { id: 'health', icon: '🏃', name: 'Health', count: 'Fitness, wellness' },
+    { id: 'career',        icon: '💼', name: 'Career',    sub: 'Job · Promotions' },
+    { id: 'finance',       icon: '◈',  name: 'Finance',   sub: 'Money · Investing' },
+    { id: 'relationships', icon: '○',  name: 'Relations', sub: 'Love · Family' },
+    { id: 'health',        icon: '◇',  name: 'Health',    sub: 'Fitness · Wellness' },
   ]
 
   const runSimulation = async () => {
@@ -24,20 +365,14 @@ export default function Simulate() {
     setLoading(true)
     setError('')
     setResult(null)
-
     try {
-      const response = await fetch('http://localhost:3002/simulate', {
+      const response = await fetch('/api/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question, category })
       })
-
-      const data = await response.json()
-      const text = data.content[0].text
-      const clean = text.replace(/```json|```/g, '').trim()
-      const parsed = JSON.parse(clean)
+      const parsed = await response.json()
       setResult(parsed)
-
       await supabase.from('simulations').insert({
         user_id: user.id,
         question_text: question,
@@ -49,232 +384,119 @@ export default function Simulate() {
         regret_score: parsed.regret_score,
         recommended_path: parsed.recommended_path
       })
-
     } catch (err) {
-      setError('Something went wrong. Please try again.')
+      setError('Connection failed. Is the server running?')
       console.error(err)
     }
     setLoading(false)
   }
 
+  const regretColor = !result ? '#111'
+    : result.regret_score < 20 ? '#16a34a'
+    : result.regret_score < 50 ? '#d97706'
+    : '#dc2626'
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#06080f',
-      fontFamily: 'outfit, sans-serif',
-      color: '#eef0f6'
-    }}>
-      <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        height: '64px',
-        background: 'rgba(6,8,15,0.9)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
-        display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 32px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '32px', height: '32px',
-            background: 'linear-gradient(135deg, #6c63ff, #9333ea)',
-            borderRadius: '9px', display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-            fontSize: '16px'
-          }}>🧬</div>
-          <span style={{ fontWeight: '700', fontSize: '18px' }}>LifeTwin</span>
+    <div className="sim-root">
+      <style>{styles}</style>
+
+      <nav className="sim-nav">
+        <div className="sim-logo">
+          <div className="sim-logo-dot" />
+          LifeTwin
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="sim-nav-links">
           {[
             { label: 'Dashboard', path: '/dashboard' },
-            { label: 'Simulate', path: '/simulate' },
-            { label: 'My Twin', path: '/profile' },
-            { label: 'Insights', path: '/insights' }
+            { label: 'Simulate',  path: '/simulate'  },
+            { label: 'My Twin',   path: '/profile'   },
+            { label: 'Insights',  path: '/insights'  },
           ].map(item => (
             <button key={item.path}
+              className={`sim-nav-btn ${item.path === '/simulate' ? 'active' : ''}`}
               onClick={() => navigate(item.path)}
-              style={{
-                background: item.path === '/simulate' ? 'rgba(108,99,255,0.1)' : 'none',
-                border: 'none',
-                color: item.path === '/simulate' ? '#a78bfa' : '#8892a4',
-                fontSize: '14px', fontWeight: '500',
-                cursor: 'pointer', padding: '8px 16px',
-                borderRadius: '8px',
-                fontFamily: 'outfit, sans-serif'
-              }}
             >{item.label}</button>
           ))}
         </div>
-        <button onClick={() => navigate('/dashboard')} style={{
-          background: 'none',
-          border: '1px solid rgba(255,255,255,0.07)',
-          color: '#6b7280', padding: '8px 14px',
-          borderRadius: '8px', cursor: 'pointer',
-          fontSize: '13px', fontFamily: 'outfit, sans-serif'
-        }}>← Dashboard</button>
+        <button className="sim-back-btn" onClick={() => navigate('/dashboard')}>← Back</button>
       </nav>
 
-      <div style={{ maxWidth: '860px', margin: '0 auto', padding: '90px 32px 60px' }}>
-        <h1 style={{
-          fontSize: '36px', fontWeight: '700',
-          textAlign: 'center', marginBottom: '8px'
-        }}>Run a Life Simulation</h1>
-        <p style={{
-          textAlign: 'center', color: '#6b7280',
-          fontSize: '16px', marginBottom: '36px'
-        }}>Ask your twin anything about your future</p>
-
-        <div style={{
-          background: '#111520',
-          border: '2px solid rgba(255,255,255,0.07)',
-          borderRadius: '20px',
-          padding: '8px 8px 8px 20px',
-          display: 'flex', gap: '12px',
-          alignItems: 'flex-start',
-          marginBottom: '20px'
-        }}>
-          <textarea
-            value={question}
-            onChange={e => setQuestion(e.target.value)}
-            placeholder="e.g. If I quit my job and go freelance, what happens in 6 months?"
-            rows={2}
-            style={{
-              flex: 1, background: 'none',
-              border: 'none', outline: 'none',
-              color: '#eef0f6', fontSize: '16px',
-              fontFamily: 'outfit, sans-serif',
-              resize: 'none', padding: '12px 0',
-              lineHeight: '1.6'
-            }}
-          />
-          <button
-            onClick={runSimulation}
-            disabled={loading || !question.trim()}
-            style={{
-              background: 'linear-gradient(135deg, #6c63ff, #7c3aed)',
-              color: 'white', border: 'none',
-              width: '52px', height: '52px',
-              borderRadius: '12px', cursor: 'pointer',
-              fontSize: '22px', flexShrink: 0,
-              marginTop: '4px',
-              opacity: loading || !question.trim() ? 0.5 : 1,
-              boxShadow: '0 4px 16px rgba(108,99,255,0.3)'
-            }}
-          >{loading ? '⏳' : '→'}</button>
+      <div className="sim-body">
+        <div className="sim-header">
+          <div className="sim-eyebrow">Life Simulation Engine</div>
+          <h1 className="sim-title">What's your<br /><em>next move?</em></h1>
+          <p className="sim-subtitle">Ask your twin anything about your future</p>
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '12px', marginBottom: '36px'
-        }}>
+        <div className="sim-input-wrap">
+          <textarea
+            className="sim-textarea"
+            value={question}
+            onChange={e => setQuestion(e.target.value)}
+            placeholder="e.g. What happens if I quit my job and go freelance in 6 months?"
+            rows={2}
+            onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) runSimulation() }}
+          />
+          <button className="sim-send-btn" onClick={runSimulation} disabled={loading || !question.trim()}>
+            {loading ? '…' : '→'}
+          </button>
+        </div>
+
+        <div className="sim-cats">
           {categories.map(cat => (
-            <div key={cat.id}
-              onClick={() => setCategory(cat.id)}
-              style={{
-                background: category === cat.id ? 'rgba(108,99,255,0.1)' : '#111520',
-                border: `1px solid ${category === cat.id ? 'rgba(108,99,255,0.4)' : 'rgba(255,255,255,0.07)'}`,
-                borderRadius: '14px', padding: '16px 12px',
-                textAlign: 'center', cursor: 'pointer'
-              }}>
-              <div style={{ fontSize: '26px', marginBottom: '6px' }}>{cat.icon}</div>
-              <div style={{ fontSize: '13px', fontWeight: '700', marginBottom: '2px' }}>{cat.name}</div>
-              <div style={{ fontSize: '11px', color: '#6b7280' }}>{cat.count}</div>
+            <div key={cat.id} className={`sim-cat ${category === cat.id ? 'active' : ''}`} onClick={() => setCategory(cat.id)}>
+              <div className="sim-cat-icon">{cat.icon}</div>
+              <div className="sim-cat-name">{cat.name}</div>
+              <div className="sim-cat-sub">{cat.sub}</div>
             </div>
           ))}
         </div>
 
         {loading && (
-          <div style={{ textAlign: 'center', padding: '48px' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🧬</div>
-            <p style={{ color: '#a78bfa', fontSize: '16px', fontWeight: '600' }}>
-              Your twin is analyzing your question...
-            </p>
-            <p style={{ color: '#6b7280', fontSize: '14px', marginTop: '8px' }}>
-              Building your personalized simulation
-            </p>
+          <div className="sim-loading">
+            <div className="sim-loading-label">Simulating your future</div>
           </div>
         )}
 
-        {error && (
-          <div style={{
-            background: 'rgba(239,68,68,0.1)',
-            border: '1px solid rgba(239,68,68,0.2)',
-            borderRadius: '12px', padding: '16px',
-            color: '#ef4444', textAlign: 'center',
-            marginBottom: '20px'
-          }}>{error}</div>
-        )}
+        {error && <div className="sim-error">⚠ {error}</div>}
 
         {result && (
-          <div>
-            <div style={{
-              background: '#111520',
-              border: '1px solid rgba(255,255,255,0.07)',
-              borderLeft: '4px solid #6c63ff',
-              borderRadius: '14px', padding: '18px 20px',
-              marginBottom: '20px',
-              fontSize: '16px', fontStyle: 'italic',
-              color: '#8892a4', lineHeight: '1.6'
-            }}>"{question}"</div>
-
-            <div style={{
-              background: '#111520',
-              border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: '16px', padding: '22px',
-              marginBottom: '20px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                <span style={{
-                  background: '#6c63ff', color: 'white',
-                  padding: '4px 12px', borderRadius: '100px',
-                  fontSize: '11px', fontWeight: '700',
-                  textTransform: 'uppercase', letterSpacing: '1px'
-                }}>Your Twin Says</span>
-              </div>
-              <p style={{ fontSize: '15px', color: '#8892a4', lineHeight: '1.8' }}>
-                {result.ai_analysis}
-              </p>
+          <div className="sim-results">
+            <div className="sim-question-block">
+              <div className="sim-question-label">Your Question</div>
+              <div className="sim-question-text">"{question}"</div>
             </div>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '14px', marginBottom: '20px'
-            }}>
+            <div className="sim-analysis-block">
+              <div className="sim-analysis-tag">Twin Analysis</div>
+              <div className="sim-analysis-text">{result.ai_analysis}</div>
+            </div>
+
+            <div className="sim-paths-label">Three Possible Paths</div>
+            <div className="sim-paths">
               {[
-                { key: 'path_a', color: '#10b981', bg: 'rgba(16,185,129,0.05)', border: 'rgba(16,185,129,0.2)', tag: 'Safe Path' },
-                { key: 'path_b', color: '#ef4444', bg: 'rgba(239,68,68,0.05)', border: 'rgba(239,68,68,0.2)', tag: 'Risky Path' },
-                { key: 'path_c', color: '#a78bfa', bg: 'rgba(108,99,255,0.07)', border: 'rgba(108,99,255,0.3)', tag: '⚡ Optimal' }
+                { key: 'path_a', badge: 'Safe',     optimal: false },
+                { key: 'path_b', badge: 'Risky',    optimal: false },
+                { key: 'path_c', badge: '★ Optimal', optimal: true  },
               ].map(p => {
                 const path = result[p.key]
                 return (
-                  <div key={p.key} style={{
-                    background: p.bg,
-                    border: `2px solid ${p.border}`,
-                    borderRadius: '18px', padding: '22px'
-                  }}>
-                    <div style={{
-                      display: 'inline-block',
-                      padding: '3px 10px', borderRadius: '100px',
-                      fontSize: '10px', fontWeight: '700',
-                      textTransform: 'uppercase', letterSpacing: '1px',
-                      background: `${p.color}20`, color: p.color,
-                      marginBottom: '12px'
-                    }}>{p.tag}</div>
-                    <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>{path.name}</div>
-                    <div style={{ fontSize: '12px', color: '#8892a4', lineHeight: '1.6', marginBottom: '16px' }}>{path.description}</div>
-                    <div style={{ fontSize: '40px', fontWeight: '700', color: p.color, marginBottom: '4px', fontFamily: 'serif' }}>{path.probability}%</div>
-                    <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '14px' }}>Success probability</div>
+                  <div key={p.key} className={`sim-path-card ${p.optimal ? 'optimal' : ''}`}>
+                    <div className="sim-path-badge">{p.badge}</div>
+                    <div className="sim-path-name">{path.name}</div>
+                    <div className="sim-path-desc">{path.description}</div>
+                    <div className="sim-path-prob">{path.probability}%</div>
+                    <div className="sim-path-prob-label">Success probability</div>
+                    <div className="sim-path-divider" />
                     {[
-                      ['Risk Level', path.risk_level],
-                      ['Regret Risk', `${path.regret_risk}%`],
-                      ['Timeline', path.timeline],
-                      ['Happiness', path.happiness_score]
+                      ['Risk',      path.risk_level],
+                      ['Regret',    `${path.regret_risk}%`],
+                      ['Timeline',  path.timeline],
+                      ['Happiness', path.happiness_score],
                     ].map(([label, val]) => (
-                      <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
-                        <span style={{ color: '#6b7280' }}>{label}</span>
-                        <span style={{ fontWeight: '700' }}>{val}</span>
+                      <div key={label} className="sim-path-stat">
+                        <span className="sim-path-stat-label">{label}</span>
+                        <span className="sim-path-stat-val">{val}</span>
                       </div>
                     ))}
                   </div>
@@ -282,41 +504,30 @@ export default function Simulate() {
               })}
             </div>
 
-            <div style={{
-              background: 'linear-gradient(135deg, #0f1120, #1a1030)',
-              border: '1px solid rgba(108,99,255,0.2)',
-              borderRadius: '18px', padding: '28px',
-              marginBottom: '20px',
-              display: 'flex', alignItems: 'center',
-              justifyContent: 'space-between', gap: '24px'
-            }}>
-              <div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px' }}>🔮 Regret Predictor</div>
-                <div style={{ fontSize: '56px', fontWeight: '700', color: '#f59e0b', fontFamily: 'serif', marginBottom: '6px' }}>{result.regret_score}%</div>
-                <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.6', maxWidth: '400px' }}>
-                  {result.regret_score < 20 ? 'Low regret risk. Following the optimal path is unlikely to lead to regret.'
-                    : result.regret_score < 50 ? 'Moderate regret risk. Proceed carefully and follow the recommended path.'
-                    : 'High regret risk. Consider the safe path before making this decision.'}
+            <div className="sim-bottom">
+              <div className="sim-regret-block">
+                <div className="sim-block-label">Regret Predictor</div>
+                <div className="sim-regret-score" style={{ color: regretColor }}>
+                  {result.regret_score}<span style={{ fontSize: '32px' }}>%</span>
+                </div>
+                <div className="sim-regret-status" style={{ color: regretColor, borderBottom: `1px solid ${regretColor}` }}>
+                  {result.regret_score < 20 ? 'Low Risk' : result.regret_score < 50 ? 'Moderate Risk' : 'High Risk'}
+                </div>
+                <div className="sim-regret-desc">
+                  {result.regret_score < 20
+                    ? 'Low probability of regret. The optimal path aligns well with long-term satisfaction.'
+                    : result.regret_score < 50
+                    ? 'Moderate regret risk. Proceed thoughtfully and follow the recommended path.'
+                    : 'High regret risk. Strongly consider the safe path before deciding.'}
                 </div>
               </div>
-              <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                <div style={{ fontSize: '48px', fontWeight: '700', color: result.regret_score < 20 ? '#10b981' : result.regret_score < 50 ? '#f59e0b' : '#ef4444' }}>
-                  {result.regret_score < 20 ? '✓' : result.regret_score < 50 ? '⚠' : '✗'}
-                </div>
-                <div style={{ color: result.regret_score < 20 ? '#10b981' : result.regret_score < 50 ? '#f59e0b' : '#ef4444', fontSize: '14px', fontWeight: '700' }}>
-                  {result.regret_score < 20 ? 'Low Risk' : result.regret_score < 50 ? 'Moderate' : 'High Risk'}
-                </div>
+              <div className="sim-insight-block">
+                <div className="sim-block-label">Key Insight</div>
+                <div className="sim-rec-pill">Recommended Path {result.recommended_path}</div>
+                <div className="sim-insight-text">{result.key_insight}</div>
               </div>
             </div>
 
-            <div style={{
-              background: 'rgba(108,99,255,0.06)',
-              border: '1px solid rgba(108,99,255,0.15)',
-              borderRadius: '14px', padding: '20px'
-            }}>
-              <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '2px', color: '#a78bfa', marginBottom: '10px' }}>💡 Key Insight</div>
-              <p style={{ fontSize: '15px', color: '#8892a4', lineHeight: '1.7' }}>{result.key_insight}</p>
-            </div>
           </div>
         )}
       </div>
