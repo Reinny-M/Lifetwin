@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import Simulate from './pages/Simulate'
 import Profile from './pages/Profile'
 import Insights from './pages/Insights'
+import ResetPassword from './pages/ResetPassword'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -22,6 +23,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/onboarding" element={
             <ProtectedRoute><Onboarding /></ProtectedRoute>
           } />
