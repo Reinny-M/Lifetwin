@@ -76,7 +76,6 @@ export default function Login() {
   const subText = isForgot ? "Enter your email and we'll send a reset link." : isLogin ? 'Sign in to continue simulating your future.' : 'Join thousands building their decision twin.'
   const submitLabel = isForgot ? 'Send reset link →' : isLogin ? 'Sign in →' : 'Create my twin →'
 
-  // Password strength helper
   const getStrength = (p) => {
     if (p.length < 6) return 1
     if (p.length < 10) return 2
@@ -109,7 +108,8 @@ export default function Login() {
         .lg-input { width:100%; padding:13px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:3px; color:#e8eaf0; font-size:14px; font-family:"DM Sans",sans-serif; font-weight:300; outline:none; transition:border-color 0.2s, box-shadow 0.2s; }
         .lg-input::placeholder { color:rgba(232,234,240,0.2); }
         .lg-input:focus { border-color:rgba(200,245,225,0.35); box-shadow:0 0 0 3px rgba(200,245,225,0.06); }
-        .lg-input.mismatch { border-color:rgba(251,113,133,0.4); }
+        .lg-input.mismatch { border-color:rgba(251,113,133,0.4); box-shadow:0 0 0 3px rgba(251,113,133,0.05); }
+        .lg-input.match { border-color:rgba(200,245,225,0.3); box-shadow:0 0 0 3px rgba(200,245,225,0.05); }
 
         .lg-tab { flex:1; padding:10px; border:none; font-size:13px; font-weight:500; cursor:pointer; font-family:"DM Sans",sans-serif; transition:all 0.2s; border-radius:2px; }
         .lg-tab.active { background:#e8eaf0; color:#0a0c0f; }
@@ -132,8 +132,8 @@ export default function Login() {
         .lg-feature-row { display:flex; align-items:flex-start; gap:14px; padding:14px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
         .lg-feature-row:last-child { border-bottom:none; }
 
-        .lg-forgot-link { font-size:12px; color:rgba(200,245,225,0.5); cursor:pointer; transition:opacity 0.2s; background:none; border:none; font-family:"DM Sans",sans-serif; padding:0; }
-        .lg-forgot-link:hover { opacity:0.7; }
+        .lg-forgot-link { font-size:12px; font-weight:500; color:rgba(200,245,225,0.8); cursor:pointer; transition:all 0.2s; background:rgba(200,245,225,0.08); border:1px solid rgba(200,245,225,0.18); border-radius:3px; padding:6px 12px; font-family:"DM Sans",sans-serif; letter-spacing:0.03em; }
+        .lg-forgot-link:hover { background:rgba(200,245,225,0.13); border-color:rgba(200,245,225,0.28); }
       `}</style>
 
       {/* LEFT — FORM */}
@@ -253,7 +253,11 @@ export default function Login() {
                 <label style={{ fontSize:'11px', fontWeight:500, color:'rgba(232,234,240,0.3)', letterSpacing:'0.08em', textTransform:'uppercase', display:'block', marginBottom:'8px' }}>Confirm password</label>
                 <div style={{ position:'relative' }}>
                   <input
-                    className={`lg-input ${confirmPassword.length > 0 && confirmPassword !== password ? 'mismatch' : ''}`}
+                    className={`lg-input ${
+                      confirmPassword.length > 0
+                        ? confirmPassword !== password ? 'mismatch' : 'match'
+                        : ''
+                    }`}
                     type={showConfirmPass ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={confirmPassword}
