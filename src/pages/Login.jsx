@@ -134,11 +134,22 @@ export default function Login() {
 
         .lg-forgot-link { font-size:12px; font-weight:500; color:rgba(200,245,225,0.8); cursor:pointer; transition:all 0.2s; background:rgba(200,245,225,0.08); border:1px solid rgba(200,245,225,0.18); border-radius:3px; padding:6px 12px; font-family:"DM Sans",sans-serif; letter-spacing:0.03em; }
         .lg-forgot-link:hover { background:rgba(200,245,225,0.13); border-color:rgba(200,245,225,0.28); }
+
+        .lg-home-btn { display:inline-flex; align-items:center; gap:7px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:3px; padding:7px 14px; color:rgba(232,234,240,0.45); font-size:12px; font-weight:400; font-family:"DM Sans",sans-serif; cursor:pointer; transition:all 0.2s; letter-spacing:0.02em; }
+        .lg-home-btn:hover { background:rgba(255,255,255,0.07); border-color:rgba(255,255,255,0.14); color:rgba(232,234,240,0.75); }
       `}</style>
 
       {/* LEFT — FORM */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'60px 48px', position:'relative', overflow:'hidden' }}>
         <div style={{ position:'absolute', top:'-60px', right:'-60px', width:'300px', height:'300px', background:'radial-gradient(circle, rgba(200,245,225,0.04) 0%, transparent 70%)', pointerEvents:'none' }}/>
+
+        {/* ── HOME BUTTON (top-left of form panel) ── */}
+        <button className="lg-home-btn" onClick={() => navigate('/')} style={{ position:'absolute', top:'28px', left:'32px' }}>
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <path d="M1.5 6.5L6.5 2l5 4.5V11.5a.5.5 0 0 1-.5.5H8.5V8.5h-4V12H2a.5.5 0 0 1-.5-.5V6.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+          </svg>
+          Home
+        </button>
 
         <div style={{ width:'100%', maxWidth:'380px', animation:'fadeUp 0.6s ease both' }}>
 
