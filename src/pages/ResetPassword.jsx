@@ -19,19 +19,26 @@ export default function ResetPassword() {
     link.href = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500&display=swap'
     document.head.appendChild(link)
 
-    // Parse token from URL hash and set session
+    // Try query params first (new template), then fall back to hash (old links)
+    const queryParams = new URLSearchParams(window.location.search)
     const hashParams = new URLSearchParams(window.location.hash.substring(1))
-    const accessToken = hashParams.get('access_token')
-    const refreshToken = hashParams.get('refresh_token')
-    const type = hashParams.get('type')
+
+    const accessToken = queryParams.get('access_token') || hashParams.get('access_token')
+    const refreshToken = queryParams.get('refresh_token') || hashParams.get('refresh_token')
+    const type = queryParams.get('type') || hashParams.get('type')
 
     if (accessToken && type === 'recovery') {
       supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken || '',
-      }).then(() => setReady(true))
+      }).then(({ error }) => {
+        if (error) {
+          navigate('/login')
+        } else {
+          setReady(true)
+        }
+      })
     } else {
-      // No valid recovery token — redirect to login
       navigate('/login')
     }
 
@@ -80,7 +87,6 @@ export default function ResetPassword() {
     </svg>
   )
 
-  // Show nothing while session is being set
   if (!ready) return (
     <div style={{ minHeight:'100vh', background:'#0a0c0f', display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ color:'rgba(232,234,240,0.3)', fontFamily:'"DM Sans",sans-serif', fontSize:'14px', fontWeight:300 }}>
