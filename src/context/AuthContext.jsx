@@ -8,15 +8,15 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
     })
 
-    // Listen for login/logout changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        // Don't set user during password recovery — let ResetPassword handle it
+        if (event === 'PASSWORD_RECOVERY') return
         setUser(session?.user ?? null)
         setLoading(false)
       }
