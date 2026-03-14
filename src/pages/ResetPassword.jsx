@@ -11,12 +11,30 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
     const link = document.createElement('link')
     link.rel = 'stylesheet'
     link.href = 'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300;1,9..144,400&family=DM+Sans:wght@300;400;500&display=swap'
     document.head.appendChild(link)
+
+    // Parse token from URL hash and set session
+    const hashParams = new URLSearchParams(window.location.hash.substring(1))
+    const accessToken = hashParams.get('access_token')
+    const refreshToken = hashParams.get('refresh_token')
+    const type = hashParams.get('type')
+
+    if (accessToken && type === 'recovery') {
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken || '',
+      }).then(() => setReady(true))
+    } else {
+      // No valid recovery token — redirect to login
+      navigate('/login')
+    }
+
     return () => document.head.removeChild(link)
   }, [])
 
@@ -60,6 +78,15 @@ export default function ResetPassword() {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M2 2l12 12M6.5 6.7A2 2 0 0 0 9.3 9.5M4.2 4.3C2.9 5.2 2 6.5 2 8c0 2.2 2.7 5 6 5 1.2 0 2.3-.4 3.2-.9M7 3.1C7.3 3 7.6 3 8 3c3.3 0 6 2.8 6 5 0 .8-.3 1.6-.8 2.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
     </svg>
+  )
+
+  // Show nothing while session is being set
+  if (!ready) return (
+    <div style={{ minHeight:'100vh', background:'#0a0c0f', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ color:'rgba(232,234,240,0.3)', fontFamily:'"DM Sans",sans-serif', fontSize:'14px', fontWeight:300 }}>
+        Verifying reset link…
+      </div>
+    </div>
   )
 
   return (
